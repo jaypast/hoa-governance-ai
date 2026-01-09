@@ -16,14 +16,12 @@ import {
   BookOpen,
   Link2,
   Trash2,
-  MoreVertical,
   X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -211,6 +209,8 @@ export function KnowledgeBase() {
   const [folders, setFolders] = useState<FolderType[]>(initialFolders);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showViewDialog, setShowViewDialog] = useState(false);
+  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
   const { toast } = useToast();
 
   const toggleFolder = (folderId: string) => {
@@ -239,8 +239,8 @@ export function KnowledgeBase() {
     }
   };
 
-  const handleDeleteDoc = (folderId: string, docId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteDoc = (folderId: string, docId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setFolders(prev => prev.map(folder => {
       if (folder.id === folderId) {
         return {
@@ -253,7 +253,55 @@ export function KnowledgeBase() {
     if (selectedDoc?.id === docId) {
       setSelectedDoc(null);
     }
+    setSelectedDocs(prev => {
+      const next = new Set(prev);
+      next.delete(docId);
+      return next;
+    });
     toast({ title: "Document removed", description: "The document has been removed from your knowledge base." });
+  };
+
+  const toggleDocSelection = (docId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedDocs(prev => {
+      const next = new Set(prev);
+      if (next.has(docId)) {
+        next.delete(docId);
+      } else {
+        next.add(docId);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedDocs.size === 0) return;
+    
+    setFolders(prev => prev.map(folder => ({
+      ...folder,
+      documents: folder.documents.filter(doc => !selectedDocs.has(doc.id))
+    })));
+    
+    if (selectedDoc && selectedDocs.has(selectedDoc.id)) {
+      setSelectedDoc(null);
+    }
+    
+    const count = selectedDocs.size;
+    setSelectedDocs(new Set());
+    setSelectionMode(false);
+    toast({ title: `${count} document${count > 1 ? 's' : ''} removed`, description: "Selected documents have been removed from your knowledge base." });
+  };
+
+  const selectAllInFolder = (folderId: string) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (folder && folder.editable) {
+      const docIds = folder.documents.map(d => d.id);
+      setSelectedDocs(prev => {
+        const next = new Set(prev);
+        docIds.forEach(id => next.add(id));
+        return next;
+      });
+    }
   };
 
   const handleUploadComplete = async (result: any) => {
@@ -346,10 +394,42 @@ export function KnowledgeBase() {
                 data-testid="document-search"
               />
             </div>
-            <Button className="gap-2" onClick={() => setShowUploadDialog(true)} data-testid="upload-document">
-              <Upload className="w-4 h-4" />
-              Upload
-            </Button>
+            {selectionMode ? (
+              <>
+                <Button 
+                  variant="destructive" 
+                  className="gap-2" 
+                  onClick={handleBulkDelete}
+                  disabled={selectedDocs.size === 0}
+                  data-testid="bulk-delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete ({selectedDocs.size})
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => { setSelectionMode(false); setSelectedDocs(new Set()); }}
+                  data-testid="cancel-selection"
+                >
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  variant="outline" 
+                  className="gap-2" 
+                  onClick={() => setSelectionMode(true)}
+                  data-testid="select-mode"
+                >
+                  Select
+                </Button>
+                <Button className="gap-2" onClick={() => setShowUploadDialog(true)} data-testid="upload-document">
+                  <Upload className="w-4 h-4" />
+                  Upload
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -397,6 +477,18 @@ export function KnowledgeBase() {
                       exit={{ height: 0, opacity: 0 }}
                       className="mt-2 ml-6 pl-6 border-l-2 border-border space-y-2"
                     >
+                      {selectionMode && folder.editable && (
+                        <div className="flex items-center justify-between py-2 px-1 mb-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-xs h-7"
+                            onClick={() => selectAllInFolder(folder.id)}
+                          >
+                            Select All
+                          </Button>
+                        </div>
+                      )}
                       {folder.documents.map((doc, docIndex) => (
                         <motion.div
                           key={doc.id}
@@ -405,11 +497,31 @@ export function KnowledgeBase() {
                           transition={{ delay: docIndex * 0.03 }}
                           className={cn(
                             "flex items-center gap-3 p-3 rounded-lg transition-colors group",
-                            selectedDoc?.id === doc.id && doc.type !== "link"
+                            selectedDocs.has(doc.id) 
+                              ? "bg-destructive/10 border border-destructive/30"
+                              : selectedDoc?.id === doc.id && doc.type !== "link"
                               ? "bg-accent/10 border border-accent/30"
                               : "hover:bg-muted/50"
                           )}
                         >
+                          {selectionMode && folder.editable && (
+                            <button
+                              onClick={(e) => toggleDocSelection(doc.id, e)}
+                              className={cn(
+                                "w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors",
+                                selectedDocs.has(doc.id)
+                                  ? "bg-destructive border-destructive text-white"
+                                  : "border-muted-foreground/30 hover:border-muted-foreground"
+                              )}
+                              data-testid={`checkbox-${doc.id}`}
+                            >
+                              {selectedDocs.has(doc.id) && (
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDocClick(doc)}
                             className="flex-1 flex items-center gap-3 text-left"
@@ -443,28 +555,16 @@ export function KnowledgeBase() {
                             <span className="text-xs text-muted-foreground shrink-0">Added {doc.addedDate}</span>
                           </button>
                           
-                          {folder.editable && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  data-testid={`doc-menu-${doc.id}`}
-                                >
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem 
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={(e) => handleDeleteDoc(folder.id, doc.id, e)}
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                          {folder.editable && !selectionMode && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={(e) => handleDeleteDoc(folder.id, doc.id, e)}
+                              data-testid={`delete-${doc.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           )}
                         </motion.div>
                       ))}

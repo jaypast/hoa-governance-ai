@@ -3,12 +3,16 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertMessageSchema, insertConversationSchema, insertDocumentSchema } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
+import { registerObjectStorageRoutes } from "./replit_integrations/object_storage";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   
+  // Register object storage routes for file uploads
+  registerObjectStorageRoutes(app);
+
   // Conversations
   app.get("/api/conversations", async (req, res) => {
     try {

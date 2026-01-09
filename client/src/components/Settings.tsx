@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { 
   Upload, 
@@ -8,17 +9,84 @@ import {
   Trash2,
   Plus,
   Check,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+interface UploadedDocument {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  uploadDate: string;
+  fileUrl?: string;
+}
 
 export function Settings() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: documents = [], isLoading } = useQuery<UploadedDocument[]>({
+    queryKey: ["/api/documents"],
+    queryFn: async () => {
+      const res = await fetch("/api/documents");
+      if (!res.ok) throw new Error("Failed to fetch documents");
+      return res.json();
+    }
+  });
+
+  const createDocumentMutation = useMutation({
+    mutationFn: async (doc: { name: string; type: string; category: string; fileUrl: string; userId: string; status: string }) => {
+      const res = await fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(doc)
+      });
+      if (!res.ok) throw new Error("Failed to create document");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      toast({ title: "Document uploaded", description: "Your document is being processed." });
+    }
+  });
+
+  const deleteDocumentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/documents/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete document");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      toast({ title: "Document deleted" });
+    }
+  });
+
+  const handleUploadComplete = async (result: any) => {
+    if (result.successful && result.successful.length > 0) {
+      for (const file of result.successful) {
+        const fileType = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+        await createDocumentMutation.mutateAsync({
+          name: file.name,
+          type: fileType,
+          category: "hoa-docs",
+          fileUrl: file.uploadURL || "",
+          userId: "demo-user",
+          status: "processing"
+        });
+      }
+    }
+  };
+
   return (
     <div className="h-full overflow-y-auto bg-background" data-testid="settings">
       <header className="px-8 py-6 border-b border-border bg-card/50 sticky top-0 z-10">
@@ -44,41 +112,79 @@ export function Settings() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-accent/50 transition-colors cursor-pointer" data-testid="upload-zone">
-                <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm font-medium text-foreground">Drop files here or click to upload</p>
-                <p className="text-xs text-muted-foreground mt-1">PDF, DOCX, XLSX up to 50MB</p>
-              </div>
+              <ObjectUploader
+                maxNumberOfFiles={5}
+                maxFileSize={52428800}
+                onGetUploadParameters={async (file) => {
+                  const res = await fetch("/api/uploads/request-url", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      name: file.name,
+                      size: file.size,
+                      contentType: file.type || "application/octet-stream",
+                    }),
+                  });
+                  if (!res.ok) throw new Error("Failed to get upload URL");
+                  const { uploadURL } = await res.json();
+                  return {
+                    method: "PUT" as const,
+                    url: uploadURL,
+                    headers: { "Content-Type": file.type || "application/octet-stream" },
+                  };
+                }}
+                onComplete={handleUploadComplete}
+                buttonClassName="w-full h-24 border-2 border-dashed border-border hover:border-accent/50 bg-transparent hover:bg-accent/5"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Upload className="w-8 h-8 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Drop files here or click to upload</span>
+                  <span className="text-xs text-muted-foreground/70">PDF, DOCX, XLSX up to 50MB</span>
+                </div>
+              </ObjectUploader>
 
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-foreground">Recent Uploads</h4>
-                <div className="space-y-2">
-                  {[
-                    { name: "CC&Rs - Oakwood Estates (2023).pdf", status: "indexed", date: "Dec 15, 2025" },
-                    { name: "Bylaws - Amended 2024.pdf", status: "indexed", date: "Jan 3, 2025" },
-                    { name: "Annual Budget 2026.xlsx", status: "processing", date: "Jan 8, 2026" },
-                  ].map((file, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                      <div className="flex items-center gap-3">
-                        <Database className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm text-foreground">{file.name}</span>
+                <h4 className="text-sm font-medium text-foreground">Uploaded Documents</h4>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : documents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">No documents uploaded yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {documents.map((doc) => (
+                      <div key={doc.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <Database className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-foreground">{doc.name}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant={doc.status === "indexed" ? "secondary" : "outline"}>
+                            {doc.status === "indexed" ? (
+                              <><Check className="w-3 h-3 mr-1" /> Indexed</>
+                            ) : (
+                              "Processing..."
+                            )}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(doc.uploadDate).toLocaleDateString()}
+                          </span>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => deleteDocumentMutation.mutate(doc.id)}
+                            disabled={deleteDocumentMutation.isPending}
+                            data-testid={`delete-doc-${doc.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant={file.status === "indexed" ? "secondary" : "outline"}>
-                          {file.status === "indexed" ? (
-                            <><Check className="w-3 h-3 mr-1" /> Indexed</>
-                          ) : (
-                            "Processing..."
-                          )}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">{file.date}</span>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

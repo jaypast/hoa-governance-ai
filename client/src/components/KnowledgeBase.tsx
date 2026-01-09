@@ -11,7 +11,10 @@ import {
   Upload,
   Calendar,
   Eye,
-  Download
+  Download,
+  ExternalLink,
+  BookOpen,
+  Link2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,12 +25,14 @@ import { cn } from "@/lib/utils";
 interface Document {
   id: string;
   name: string;
-  type: "pdf" | "docx" | "xlsx";
+  type: "pdf" | "docx" | "xlsx" | "link";
   uploadDate: string;
   sections?: number;
+  url?: string;
+  source?: string;
 }
 
-interface Folder {
+interface FolderType {
   id: string;
   name: string;
   icon: React.ElementType;
@@ -37,7 +42,7 @@ interface Folder {
   description: string;
 }
 
-const folders: Folder[] = [
+const folders: FolderType[] = [
   {
     id: "hoa-docs",
     name: "Your HOA Documents",
@@ -79,6 +84,168 @@ const folders: Folder[] = [
       { id: "11", name: "Dallas Code Compliance Reference", type: "pdf", uploadDate: "System", sections: 10 },
     ]
   },
+  {
+    id: "reference-sources",
+    name: "Reference Sources",
+    icon: BookOpen,
+    color: "text-emerald-500",
+    bg: "bg-emerald-500/10",
+    description: "External articles, guides & research",
+    documents: [
+      { 
+        id: "ref-1", 
+        name: "AI and Community Associations: Legal Risks, Fiduciary Duties, and Best Practices", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://micondolaw.com/2025/07/10/ai-and-community-associations-legal-risks-fiduciary-duties-and-best-practices-for-condo-and-hoa-boards/",
+        source: "MI Condo Law"
+      },
+      { 
+        id: "ref-2", 
+        name: "What Can Happen If I Use AI as a Condo or HOA Board Member?", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://gawthrop.com/what-can-happen-if-i-use-ai-as-a-condo-or-hoa-board-member/",
+        source: "Gawthrop Law"
+      },
+      { 
+        id: "ref-3", 
+        name: "Understanding Texas HOA Law: A Practical Guide to Chapter 209", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://www.dallasfortworthassociationmanagement.com/blog/understanding-texas-hoa-law-a-practical-guide-to-chapter-209",
+        source: "DFW Association Management"
+      },
+      { 
+        id: "ref-4", 
+        name: "Texas Residential Property Owners Protection Act", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://www.pamcotx.com/texas-residential-property-owners-protection-act/",
+        source: "PAMco"
+      },
+      { 
+        id: "ref-5", 
+        name: "Bridging Legal Knowledge and AI: Retrieval-Augmented Generation", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://arxiv.org/html/2502.20364v1",
+        source: "arXiv"
+      },
+      { 
+        id: "ref-6", 
+        name: "How Law Firms Use RAG to Boost Legal Research", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://www.datategy.net/2025/04/14/how-law-firms-use-rag-to-boost-legal-research/",
+        source: "Datategy"
+      },
+      { 
+        id: "ref-7", 
+        name: "AI-Powered HOA Management Software: Features & Development Tips", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://depextechnologies.com/blog/ai-powered-hoa-management-software-features-development-tips/",
+        source: "Depex Technologies"
+      },
+      { 
+        id: "ref-8", 
+        name: "Azure AI Search and HOA Document Assistant - Case Study", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://firstlinesoftware.com/case-study/hoa-documents-talking-back/",
+        source: "First Line Software"
+      },
+      { 
+        id: "ref-9", 
+        name: "RAG: Towards a Promising LLM Architecture for Legal Work", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://jolt.law.harvard.edu/digest/retrieval-augmented-generation-rag-towards-a-promising-llm-architecture-for-legal-work",
+        source: "Harvard JOLT"
+      },
+      { 
+        id: "ref-10", 
+        name: "Restrictive Covenants - Property Owners' Associations Guide", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://guides.sll.texas.gov/property-owners-associations/ccrs",
+        source: "Texas State Law Library"
+      },
+      { 
+        id: "ref-11", 
+        name: "General Information - Property Owners' Associations", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://guides.sll.texas.gov/property-owners-associations",
+        source: "Texas State Law Library"
+      },
+      { 
+        id: "ref-12", 
+        name: "Texas Property Code, Title 11, Restrictive Covenants", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://www.hopb.co/texas-property-code-title-11-restrictive-covenants",
+        source: "HOPB"
+      },
+      { 
+        id: "ref-13", 
+        name: "A Closer Look at the Texas Homeowner Protection Act", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://www.grahammanagementhouston.com/texas-homeowner-protection-act/",
+        source: "Graham Management"
+      },
+      { 
+        id: "ref-14", 
+        name: "HOA Laws and Regulations in Dallas, TX in 2025", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://www.steadily.com/blog/hoa-laws-regulations-dallas",
+        source: "Steadily"
+      },
+      { 
+        id: "ref-15", 
+        name: "Dallas HOA & Condo Management Best Practices", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://www.properhoamanage.com/hoas-and-condominium-management-best-practices/",
+        source: "Proper HOA Manage"
+      },
+      { 
+        id: "ref-16", 
+        name: "Texas HOA Laws | Homeowner Association Rules", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://www.hoamanagement.com/hoa-state-laws/texas/",
+        source: "HOA Management"
+      },
+      { 
+        id: "ref-17", 
+        name: "Planning & Development HOANA - City of Dallas", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://dallascityhall.com/departments/pnv/pages/hoana.aspx",
+        source: "City of Dallas"
+      },
+      { 
+        id: "ref-18", 
+        name: "Restrictive Covenants: Modifying and Updating (PDF)", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "http://wcglaw.net/wp-content/uploads/restrictive-covenants-modifying-and-updating.pdf",
+        source: "WCG Law"
+      },
+      { 
+        id: "ref-19", 
+        name: "Texas HOA Rules: Everything You Need to Know", 
+        type: "link", 
+        uploadDate: "External", 
+        url: "https://www.fsresidential.com/texas/news-events/articles/establishing-hoa-rules-and-regulations-in-texas/",
+        source: "FirstService Residential"
+      },
+    ]
+  },
 ];
 
 export function KnowledgeBase() {
@@ -99,9 +266,28 @@ export function KnowledgeBase() {
       case "pdf": return "text-red-500 bg-red-500/10";
       case "docx": return "text-blue-500 bg-blue-500/10";
       case "xlsx": return "text-emerald-500 bg-emerald-500/10";
+      case "link": return "text-cyan-500 bg-cyan-500/10";
       default: return "text-gray-500 bg-gray-500/10";
     }
   };
+
+  const handleDocClick = (doc: Document) => {
+    if (doc.type === "link" && doc.url) {
+      window.open(doc.url, "_blank", "noopener,noreferrer");
+    } else {
+      setSelectedDoc(doc);
+    }
+  };
+
+  const filteredFolders = folders.map(folder => ({
+    ...folder,
+    documents: folder.documents.filter(doc => 
+      doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (doc.source?.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+  })).filter(folder => 
+    searchQuery === "" || folder.documents.length > 0
+  );
 
   return (
     <div className="h-full flex flex-col bg-background" data-testid="knowledge-base">
@@ -133,7 +319,7 @@ export function KnowledgeBase() {
       <div className="flex-1 flex overflow-hidden">
         <ScrollArea className="flex-1 p-8">
           <div className="space-y-4 max-w-3xl">
-            {folders.map((folder, folderIndex) => {
+            {filteredFolders.map((folder, folderIndex) => {
               const isExpanded = expandedFolders.includes(folder.id);
               const FolderIcon = folder.icon;
 
@@ -157,7 +343,7 @@ export function KnowledgeBase() {
                       <p className="text-sm text-muted-foreground">{folder.description}</p>
                     </div>
                     <Badge variant="secondary" className="mr-2">
-                      {folder.documents.length} docs
+                      {folder.documents.length} {folder.id === "reference-sources" ? "sources" : "docs"}
                     </Badge>
                     {isExpanded ? (
                       <ChevronDown className="w-5 h-5 text-muted-foreground" />
@@ -179,28 +365,45 @@ export function KnowledgeBase() {
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: docIndex * 0.03 }}
-                          onClick={() => setSelectedDoc(doc)}
+                          onClick={() => handleDocClick(doc)}
                           className={cn(
-                            "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors",
-                            selectedDoc?.id === doc.id
+                            "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors group",
+                            selectedDoc?.id === doc.id && doc.type !== "link"
                               ? "bg-accent/10 border border-accent/30"
                               : "hover:bg-muted/50"
                           )}
                           data-testid={`doc-${doc.id}`}
                         >
                           <div className={cn("p-1.5 rounded", getTypeColor(doc.type))}>
-                            <FileText className="w-4 h-4" />
+                            {doc.type === "link" ? (
+                              <Link2 className="w-4 h-4" />
+                            ) : (
+                              <FileText className="w-4 h-4" />
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">{doc.name}</p>
+                            <p className="text-sm font-medium text-foreground truncate flex items-center gap-2">
+                              {doc.name}
+                              {doc.type === "link" && (
+                                <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                              )}
+                            </p>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-xs text-muted-foreground uppercase">{doc.type}</span>
-                              {doc.sections && (
-                                <span className="text-xs text-muted-foreground">• {doc.sections} sections</span>
+                              {doc.source ? (
+                                <span className="text-xs text-muted-foreground">{doc.source}</span>
+                              ) : (
+                                <>
+                                  <span className="text-xs text-muted-foreground uppercase">{doc.type}</span>
+                                  {doc.sections && (
+                                    <span className="text-xs text-muted-foreground">• {doc.sections} sections</span>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
-                          <span className="text-xs text-muted-foreground shrink-0">{doc.uploadDate}</span>
+                          {doc.type !== "link" && (
+                            <span className="text-xs text-muted-foreground shrink-0">{doc.uploadDate}</span>
+                          )}
                         </motion.button>
                       ))}
                     </motion.div>
@@ -211,7 +414,7 @@ export function KnowledgeBase() {
           </div>
         </ScrollArea>
 
-        {selectedDoc && (
+        {selectedDoc && selectedDoc.type !== "link" && (
           <motion.aside
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 380, opacity: 1 }}
